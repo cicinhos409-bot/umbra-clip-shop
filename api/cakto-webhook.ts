@@ -62,7 +62,9 @@ export default async function handler(request: ApiRequest, response: ApiResponse
   const email = String(payload.data?.customer?.email || "").trim().toLowerCase();
   const plan = planFrom(payload);
   if (!eventId || !email) return response.status(400).json({ error: "missing_order_or_customer" });
-  if (ACTIVE_EVENTS.has(event) && !plan) return response.status(422).json({ error: "unknown_offer" });
+  // A Cakto envia uma oferta fictícia nos testes do painel. Confirmamos o
+  // recebimento sem conceder acesso quando a oferta não é Pro nem Elite.
+  if (ACTIVE_EVENTS.has(event) && !plan) return response.status(200).json({ received: true, ignored: true, reason: "unknown_offer" });
 
   const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -88,4 +90,3 @@ export default async function handler(request: ApiRequest, response: ApiResponse
   }
   return response.status(200).json({ received: true, result: data });
 }
-
