@@ -95,9 +95,9 @@ set search_path = public
 as $$
   select case p_plan
     when 'free' then 3
-    when 'pro' then 270
-    when 'elite' then 470
-    when 'admin' then 470
+    when 'pro' then 1000
+    when 'elite' then -1
+    when 'admin' then -1
     else 3
   end
 $$;
@@ -138,7 +138,7 @@ begin
     and r.expires_at > now();
 
   return query select v_used, v_reserved, v_limit,
-    greatest(0::bigint, v_limit::bigint - v_used - v_reserved), v_plan;
+    case when v_limit < 0 then -1::bigint else greatest(0::bigint, v_limit::bigint - v_used - v_reserved) end, v_plan;
 end;
 $$;
 
@@ -190,7 +190,7 @@ begin
   from public.clip_shop_generation_reservations
   where user_id = v_user and period_start = v_period;
 
-  if v_committed + p_requested_count > v_limit then
+  if v_limit >= 0 and v_committed + p_requested_count > v_limit then
     raise exception 'CLIP_SHOP_MONTHLY_LIMIT_REACHED' using errcode = 'P0001';
   end if;
 

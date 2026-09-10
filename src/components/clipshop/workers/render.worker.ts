@@ -7,9 +7,15 @@ import {
 } from "mediabunny";
 import { registerAacEncoder } from "@mediabunny/aac-encoder";
 import { getSegmentDuration, normalizePacketTimestamp } from "../services/packet-timing";
-import type { AudioPolicy, OutputQuality, VideoCompositionMode } from "../types";
+import type { AudioPolicy, OutputQuality, VariationRecipe, VideoCompositionMode } from "../types";
 
-type RenderSettings = { audioPolicy: AudioPolicy; compositionMode: VideoCompositionMode; quality?: OutputQuality };
+type RenderSettings = {
+  audioPolicy: AudioPolicy;
+  compositionMode: VideoCompositionMode;
+  quality?: OutputQuality;
+  recipe?: VariationRecipe;
+  metadata?: { title: string; description: string; comment: string };
+};
 type Request = { id: string; clips: [{ file: File; muted: boolean }, { file: File; muted: boolean }, { file: File; muted: boolean }]; settings?: RenderSettings };
 type Response = { id: string; type: "progress"; value: number } | { id: string; type: "done"; buffer: ArrayBuffer; duration: number } | { id: string; type: "error"; message: string };
 
@@ -62,20 +68,39 @@ function processAudioSample(sample: AudioSample, duration: number, policy: Audio
   return new AudioSample({ data, format: "f32-planar", numberOfChannels: channels, sampleRate: sample.sampleRate, timestamp: sample.timestamp });
 }
 
-function blurredFrame(sample: VideoSample, width: number, height: number) {
+function transformedFrame(sample: VideoSample, width: number, height: number, settings: RenderSettings) {
+  const recipe = settings.recipe;
+  if (!recipe && settings.compositionMode !== "blur") return sample;
   const canvas = new OffscreenCanvas(width, height);
   const context = canvas.getContext("2d");
   if (!context) return sample;
+  context.fillStyle = "black";
+  context.fillRect(0, 0, width, height);
+
   const sourceRatio = sample.displayWidth / sample.displayHeight;
   const targetRatio = width / height;
-  const coverWidth = sourceRatio > targetRatio ? height * sourceRatio : width;
-  const coverHeight = sourceRatio > targetRatio ? height : width / sourceRatio;
-  context.filter = "blur(28px) brightness(.65)";
-  sample.draw(context, (width - coverWidth) / 2, (height - coverHeight) / 2, coverWidth, coverHeight);
+  if (settings.compositionMode === "blur") {
+    const coverWidth = sourceRatio > targetRatio ? height * sourceRatio : width;
+    const coverHeight = sourceRatio > targetRatio ? height : width / sourceRatio;
+    context.filter = "blur(28px) brightness(.65)";
+    sample.draw(context, (width - coverWidth) / 2, (height - coverHeight) / 2, coverWidth, coverHeight);
+  }
+
+  const cover = settings.compositionMode === "cover";
+  const baseWidth = cover
+    ? (sourceRatio > targetRatio ? height * sourceRatio : width)
+    : (sourceRatio > targetRatio ? width : height * sourceRatio);
+  const baseHeight = cover
+    ? (sourceRatio > targetRatio ? height : width / sourceRatio)
+    : (sourceRatio > targetRatio ? width / sourceRatio : height);
+  const zoom = recipe?.zoom ?? 1;
+  const drawWidth = baseWidth * zoom;
+  const drawHeight = baseHeight * zoom;
+  const x = (width - drawWidth) / 2 + (recipe?.offsetX ?? 0) * width;
+  const y = (height - drawHeight) / 2 + (recipe?.offsetY ?? 0) * height;
+  context.filter = `brightness(${recipe?.brightness ?? 1}) saturate(${recipe?.saturation ?? 1})`;
+  sample.draw(context, x, y, drawWidth, drawHeight);
   context.filter = "none";
-  const containWidth = sourceRatio > targetRatio ? width : height * sourceRatio;
-  const containHeight = sourceRatio > targetRatio ? width / sourceRatio : height;
-  sample.draw(context, (width - containWidth) / 2, (height - containHeight) / 2, containWidth, containHeight);
   return canvas;
 }
 
@@ -128,7 +153,7 @@ async function normalizeFile(file: File, includeAudio: boolean, ensureAudio: boo
   try {
     const conversion = await Conversion.init({
       input, output, tracks: "primary", showWarnings: false,
-      video: { width, height, fit: settings.compositionMode === "cover" ? "cover" : "contain", codec: "avc", bitrate: settings.quality === "quality" ? 8_000_000 : 4_000_000, frameRate: 30, keyFrameInterval: 2, forceTranscode: true, allowRotationMetadata: false, process: settings.compositionMode === "blur" ? (sample) => blurredFrame(sample, width, height) : undefined, processedWidth: width, processedHeight: height },
+      video: { width, height, fit: settings.compositionMode === "cover" ? "cover" : "contain", codec: "avc", bitrate: settings.quality === "quality" ? 8_000_000 : 4_000_000, frameRate: 30, keyFrameInterval: 2, forceTranscode: true, allowRotationMetadata: false, process: settings.recipe || settings.compositionMode === "blur" ? (sample) => transformedFrame(sample, width, height, settings) : undefined, processedWidth: width, processedHeight: height },
       audio: includeAudio ? { codec: "aac", bitrate: 128_000, sampleRate: 48_000, numberOfChannels: 2, sampleFormat: "f32", forceTranscode: true, process: settings.audioPolicy.mode === "normalize" && audioAnalysis ? (sample) => processAudioSample(sample, inputDuration, settings.audioPolicy, audioAnalysis) : undefined } : { discard: true },
     });
     if (!conversion.isValid) throw new Error("Não foi possível preparar este clipe para o perfil interno.");
@@ -162,7 +187,7 @@ async function concat(files: [File, File, File], muted: [boolean, boolean, boole
       const configs = await Promise.all(audios.map((track) => track.getDecoderConfig()));
       needsAudioNormalization = !codecs[0] || codecs.some((codec) => codec !== codecs[0]) || configs.some((config) => config?.sampleRate !== configs[0]?.sampleRate || config?.numberOfChannels !== configs[0]?.numberOfChannels);
     }
-    const forcePolicyNormalization = settings.compositionMode !== "original" || settings.audioPolicy.mode !== "preserve" || muted.some(Boolean) || (hasSomeAudio && !hasEveryAudio);
+    const forcePolicyNormalization = Boolean(settings.recipe) || settings.compositionMode !== "original" || settings.audioPolicy.mode !== "preserve" || muted.some(Boolean) || (hasSomeAudio && !hasEveryAudio);
     if ((needsVideoNormalization || needsAudioNormalization || forcePolicyNormalization) && !normalized) {
       progress(0.03);
       const normalizedFiles = [] as File[];
@@ -190,9 +215,16 @@ async function concat(files: [File, File, File], muted: [boolean, boolean, boole
     }
 
     const target = new BufferTarget();
-    const output = new Output({ format: new Mp4OutputFormat({ fastStart: "in-memory" }), target });
+    const output = new Output({ format: new Mp4OutputFormat({ fastStart: "in-memory", metadataFormat: "mdta" }), target });
     output.addVideoTrack(videoSource, { rotation: dimensions[0][2] });
     if (audioSource) output.addAudioTrack(audioSource);
+    if (settings.metadata) output.setMetadataTags({
+      title: settings.metadata.title,
+      description: settings.metadata.description,
+      artist: "UMBRA Clip Shop",
+      comment: settings.metadata.comment,
+      date: new Date(),
+    });
     await output.start();
 
     const segmentStarts = await Promise.all(videos.map(async (video, index) => {

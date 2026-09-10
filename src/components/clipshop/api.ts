@@ -10,8 +10,9 @@ export async function getClipShopUsage(plan: string): Promise<ClipShopUsage> {
   const used = Number(row?.used ?? 0);
   const reserved = Number(row?.reserved ?? 0);
   const remoteLimit = Number(row?.limit_total ?? -1);
-  const limit = remoteLimit >= 0 ? remoteLimit : definition.monthlyVideos;
-  const remaining = remoteLimit >= 0 ? Number(row?.remaining ?? Math.max(0, limit - used - reserved)) : Math.max(0, limit - used - reserved);
+  const remoteIsUnlimited = String(row?.plan ?? definition.key) === "elite" || String(row?.plan) === "admin";
+  const limit = remoteIsUnlimited ? -1 : remoteLimit >= 0 ? remoteLimit : definition.monthlyVideos;
+  const remaining = limit < 0 ? Number.POSITIVE_INFINITY : remoteLimit >= 0 ? Number(row?.remaining ?? Math.max(0, limit - used - reserved)) : Math.max(0, limit - used - reserved);
   return { limit, used, reserved, remaining, plan: String(row?.plan ?? definition.key) };
 }
 

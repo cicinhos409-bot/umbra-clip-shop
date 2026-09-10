@@ -43,6 +43,15 @@ export interface ClipAsset {
   createdAt: string;
 }
 
+export interface VariationRecipe {
+  version: number;
+  zoom: number;
+  offsetX: number;
+  offsetY: number;
+  brightness: number;
+  saturation: number;
+}
+
 export interface Variation {
   id: string;
   algorithmVersion: number;
@@ -53,6 +62,7 @@ export interface Variation {
   selected: boolean;
   status: VariationStatus;
   progress: number;
+  recipe?: VariationRecipe;
   error?: string;
   recoverable?: boolean;
   outputId?: string;
@@ -67,6 +77,8 @@ export interface ClipShopProject {
   quality: OutputQuality;
   audioPolicy: AudioPolicy;
   compositionMode: VideoCompositionMode;
+  visualVariationsEnabled: boolean;
+  mp4MetadataEnabled: boolean;
   exportNameTemplate: string;
   clips: ClipAsset[];
   variations: Variation[];

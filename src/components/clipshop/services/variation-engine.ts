@@ -1,6 +1,7 @@
 import type { ClipAsset, ClipCategory, Variation, VariationStrategy } from "../types";
+import { buildVariationRecipe } from "./variation-recipe";
 
-export const CLIPSHOP_ALGORITHM_VERSION = 1;
+export const CLIPSHOP_ALGORITHM_VERSION = 2;
 export const MAX_SUGGESTED_VARIATIONS = 27;
 
 type Trio = { hookId: string; bodyId: string; ctaId: string };
@@ -57,7 +58,7 @@ export function generateVariations(clips: ClipAsset[], strategy: VariationStrate
   if (candidates.length <= limit) {
     return candidates.map((trio, index) => ({
       id: createVariationId(trio), algorithmVersion: CLIPSHOP_ALGORITHM_VERSION, number: index + 1,
-      ...trio, selected: false, status: "idle", progress: 0,
+      ...trio, selected: false, status: "idle", progress: 0, recipe: buildVariationRecipe(index + 1),
     }));
   }
   const usage = {
@@ -78,7 +79,7 @@ export function generateVariations(clips: ClipAsset[], strategy: VariationStrate
   }
   return selected.map((trio, index) => ({
     id: createVariationId(trio), algorithmVersion: CLIPSHOP_ALGORITHM_VERSION, number: index + 1,
-    ...trio, selected: false, status: "idle", progress: 0,
+    ...trio, selected: false, status: "idle", progress: 0, recipe: buildVariationRecipe(index + 1),
   }));
 }
 

@@ -2,8 +2,8 @@ import { CLIP_SHOP_PLANS, getClipShopPlan, normalizeClipShopPlan } from "./plans
 
 test("defines the monthly video limits for every Clip Shop plan", () => {
   expect(CLIP_SHOP_PLANS.free.monthlyVideos).toBe(3);
-  expect(CLIP_SHOP_PLANS.pro.monthlyVideos).toBe(270);
-  expect(CLIP_SHOP_PLANS.elite.monthlyVideos).toBe(470);
+  expect(CLIP_SHOP_PLANS.pro.monthlyVideos).toBe(1000);
+  expect(CLIP_SHOP_PLANS.elite.monthlyVideos).toBe(-1);
 });
 
 test("allows Elite to generate all 27 combinations in one batch", () => {

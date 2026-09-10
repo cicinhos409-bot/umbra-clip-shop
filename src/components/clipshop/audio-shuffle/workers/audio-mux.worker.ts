@@ -23,9 +23,9 @@ async function mux(videoBlob: Blob, audioBlob: Blob) {
     const video = await videoInput.getPrimaryVideoTrack(); const audio = await audioInput.getPrimaryAudioTrack();
     if (!video || !audio) throw new Error("Faixa necessária ausente durante o mux do Audio Shuffle.");
     const codec = await video.getCodec(); if (!codec) throw new Error("Codec de vídeo não identificado.");
-    const target = new BufferTarget(); const output = new Output({ format: new Mp4OutputFormat({ fastStart: "in-memory" }), target });
+    const target = new BufferTarget(); const output = new Output({ format: new Mp4OutputFormat({ fastStart: "in-memory", metadataFormat: "mdta" }), target });
     const videoSource = new EncodedVideoPacketSource(codec); const audioSource = new AudioSampleSource({ codec: "aac", bitrate: 160_000 });
-    output.addVideoTrack(videoSource, { rotation: await video.getRotation() }); output.addAudioTrack(audioSource); await output.start();
+    output.addVideoTrack(videoSource, { rotation: await video.getRotation() }); output.addAudioTrack(audioSource); output.setMetadataTags(await videoInput.getMetadataTags()); await output.start();
     const videoSink = new EncodedPacketSink(video); const videoConfig = await video.getDecoderConfig(); const videoFirst = await video.getFirstTimestamp(); let firstPacket = true;
     for await (const packet of videoSink.packets()) { await videoSource.add(packet.clone({ timestamp: Math.max(0, packet.timestamp - videoFirst) }), firstPacket && videoConfig ? { decoderConfig: videoConfig } : undefined); firstPacket = false; }
     const audioFirst = await audio.getFirstTimestamp(); const audioSink = new AudioSampleSink(audio);

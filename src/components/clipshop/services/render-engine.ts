@@ -1,8 +1,9 @@
 import type { AudioPolicy, ClipAsset, OutputQuality, RenderProgress, Variation, VideoCompositionMode } from "../types";
+import { buildVariationRecipe, variationRecipeSignature } from "./variation-recipe";
 
 export interface RenderedVideo { blob: Blob; duration: number }
 
-export function renderVariation(variation: Variation, clips: ClipAsset[], settings?: { audioPolicy: AudioPolicy; compositionMode: VideoCompositionMode; quality?: OutputQuality }, onProgress?: (event: RenderProgress) => void, signal?: AbortSignal): Promise<RenderedVideo> {
+export function renderVariation(variation: Variation, clips: ClipAsset[], settings?: { audioPolicy: AudioPolicy; compositionMode: VideoCompositionMode; quality?: OutputQuality; visualVariationsEnabled?: boolean; mp4MetadataEnabled?: boolean }, onProgress?: (event: RenderProgress) => void, signal?: AbortSignal): Promise<RenderedVideo> {
   const resolveClip = (id: string) => clips.find((clip) => clip.id === id);
   const hook = resolveClip(variation.hookId);
   const body = resolveClip(variation.bodyId);
@@ -30,6 +31,20 @@ export function renderVariation(variation: Variation, clips: ClipAsset[], settin
     };
     worker.onerror = (event) => { signal?.removeEventListener("abort", abort); worker.terminate(); reject(new Error(event.message || "Falha no Worker de vídeo.")); };
     onProgress?.({ variationId: variation.id, progress: 0, stage: "preparing" });
-    worker.postMessage({ id: requestId, clips: [hook, body, cta].map((clip) => ({ file: clip.file, muted: Boolean(clip.muted) })), settings });
+    const recipe = settings?.visualVariationsEnabled === false ? undefined : variation.recipe || buildVariationRecipe(variation.number);
+    const metadata = settings?.mp4MetadataEnabled === false ? undefined : {
+      title: `UMBRA Clip Shop - Variação ${String(variation.number).padStart(2, "0")}`,
+      description: `${hook.semanticName} + ${body.semanticName} + ${cta.semanticName}`,
+      comment: `variation_id=${variation.id}; algorithm=v${variation.algorithmVersion}; recipe=${recipe ? variationRecipeSignature(recipe) : "disabled"}`,
+    };
+    worker.postMessage({
+      id: requestId,
+      clips: [hook, body, cta].map((clip) => ({ file: clip.file, muted: Boolean(clip.muted) })),
+      settings: {
+        ...settings,
+        recipe,
+        metadata,
+      },
+    });
   });
 }

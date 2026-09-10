@@ -5,8 +5,8 @@ import Logo from "../Logo";
 
 const plans = [
   { name: "Free", price: "R$ 0", text: "Para testar o fluxo completo.", features: ["3 vídeos por mês", "1 vídeo por lote", "Processamento local"] },
-  { name: "Pro", price: "R$ 27", text: "Para publicar toda semana.", featured: true, features: ["270 vídeos por mês", "5 vídeos por lote", "27 combinações", "Audio Shuffle"] },
-  { name: "Elite", price: "R$ 67", text: "Para operações em escala.", features: ["470 vídeos por mês", "27 vídeos por lote", "27 combinações", "Prioridade em novidades"] },
+  { name: "Pro", price: "R$ 27", text: "Para publicar toda semana.", featured: true, features: ["Até 1.000 vídeos por mês", "5 vídeos por lote", "27 combinações", "Audio Shuffle"] },
+  { name: "Elite", price: "R$ 67", text: "Para operações em escala.", features: ["Vídeos ilimitados", "27 vídeos por lote", "27 combinações", "Prioridade em novidades"] },
 ];
 
 const CHECKOUT_URLS = {
