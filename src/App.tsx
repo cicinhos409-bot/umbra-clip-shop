@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
+import { Loader2 } from "lucide-react";
 import ClipShop from "./components/clipshop";
 import LandingPage from "./components/landing/LandingPage";
 import AuthPage from "./components/auth/AuthPage";
@@ -31,6 +32,19 @@ async function loadAccountProfile(session: Session): Promise<AccountProfile> {
   };
 }
 
+function fallbackProfile(session: Session): AccountProfile {
+  return {
+    name: session.user.user_metadata?.name,
+    email: session.user.email,
+    plan: String(session.user.user_metadata?.plan || "free"),
+    isAdmin: false,
+  };
+}
+
+function LoadingScreen({ message = "Carregando sua conta..." }: { message?: string }) {
+  return <main className="grid min-h-screen place-items-center bg-[#070707] text-zinc-200"><div className="text-center"><Loader2 className="mx-auto h-8 w-8 animate-spin text-amber-400" /><p className="mt-4 text-xs font-bold text-zinc-500">{message}</p></div></main>;
+}
+
 function route() {
   const hash = window.location.hash.toLowerCase();
   if (hash.startsWith("#/clipshop")) return "app";
@@ -42,15 +56,21 @@ export default function App() {
   const [currentRoute, setCurrentRoute] = useState(route());
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<AccountProfile | null>(null);
+  const [authLoading, setAuthLoading] = useState(supabaseConfigured);
+  const [profileLoading, setProfileLoading] = useState(false);
 
   useEffect(() => {
     const onHash = () => setCurrentRoute(route());
     window.addEventListener("hashchange", onHash);
     if (supabaseConfigured) {
-      supabase.auth.getSession().then(({ data }) => setSession(data.session));
-      const { data } = supabase.auth.onAuthStateChange((_event, next) => {
-        setProfile(null);
+      supabase.auth.getSession()
+        .then(({ data }) => setSession(data.session))
+        .catch((error) => console.error("[Supabase] Não foi possível restaurar a sessão.", error))
+        .finally(() => setAuthLoading(false));
+      const { data } = supabase.auth.onAuthStateChange((event, next) => {
+        if (event === "SIGNED_OUT") setProfile(null);
         setSession(next);
+        setAuthLoading(false);
       });
       return () => { window.removeEventListener("hashchange", onHash); data.subscription.unsubscribe(); };
     }
@@ -60,32 +80,47 @@ export default function App() {
   useEffect(() => {
     if (!session || !supabaseConfigured) {
       setProfile(null);
+      setProfileLoading(false);
       return;
     }
 
     let active = true;
+    setProfileLoading(true);
+    const timeout = window.setTimeout(() => {
+      if (active) {
+        setProfile((current) => current || fallbackProfile(session));
+        setProfileLoading(false);
+      }
+    }, 6000);
     loadAccountProfile(session)
       .then((nextProfile) => { if (active) setProfile(nextProfile); })
       .catch((error) => {
         console.error("[Supabase] Não foi possível carregar o perfil da conta.", error);
-        if (active) setProfile({
-          name: session.user.user_metadata?.name,
-          email: session.user.email,
-          plan: String(session.user.user_metadata?.plan || "free"),
-          isAdmin: false,
-        });
+        if (active) setProfile(fallbackProfile(session));
+      })
+      .finally(() => {
+        window.clearTimeout(timeout);
+        if (active) setProfileLoading(false);
       });
-    return () => { active = false; };
-  }, [session?.access_token, session?.user.id]);
+    return () => { active = false; window.clearTimeout(timeout); };
+  }, [session?.user.id]);
+
+  useEffect(() => {
+    if (authLoading) return;
+    if (currentRoute === "auth" && session) window.location.hash = "#/clipshop";
+    if (currentRoute === "app" && supabaseConfigured && !session) window.location.hash = "#/auth?mode=login";
+  }, [authLoading, currentRoute, session]);
+
+  if (authLoading) return <LoadingScreen message="Restaurando sua sessão..." />;
 
   if (currentRoute === "auth") {
-    if (session) { window.location.hash = "#/clipshop"; return null; }
+    if (session) return <LoadingScreen />;
     return <AuthPage />;
   }
 
   if (currentRoute === "app") {
-    if (supabaseConfigured && !session) { window.location.hash = "#/auth?mode=login"; return null; }
-    if (supabaseConfigured && session && !profile) return null;
+    if (supabaseConfigured && !session) return <LoadingScreen message="Abrindo o login..." />;
+    if (supabaseConfigured && session && profileLoading && !profile) return <LoadingScreen />;
     const user = session?.user;
     return <ClipShop
       currentUser={{

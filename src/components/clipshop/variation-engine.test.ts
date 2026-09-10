@@ -1,4 +1,4 @@
-import { generateVariations, hasMinimumClips } from "./services/variation-engine";
+import { generateVariations, hasMinimumClips, orderVariationsForDiversity } from "./services/variation-engine";
 import type { ClipAsset, ClipCategory } from "./types";
 
 function clip(category: ClipCategory, slot: number): ClipAsset {
@@ -59,4 +59,15 @@ test.each(["balanced", "hooks", "bodies", "ctas"] as const)("strategy %s never d
   const result = generateVariations(full, strategy);
   const trios = result.map((item) => `${item.hookId}|${item.bodyId}|${item.ctaId}`);
   expect(new Set(trios).size).toBe(trios.length);
+});
+
+test("orders a batch to avoid similar consecutive combinations", () => {
+  const variations = generateVariations(full);
+  const original = variations.slice(0, 8);
+  const ordered = orderVariationsForDiversity(original);
+  const score = (rows: typeof ordered) => rows.slice(1).reduce((total, current, index) => {
+    const previous = rows[index];
+    return total + Number(previous.hookId === current.hookId) + Number(previous.bodyId === current.bodyId) + Number(previous.ctaId === current.ctaId);
+  }, 0);
+  expect(score(ordered)).toBeLessThan(score(original));
 });

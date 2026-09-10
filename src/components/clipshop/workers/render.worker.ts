@@ -18,6 +18,8 @@ type RenderSettings = {
   outputAspectRatio?: OutputAspectRatio;
   headlineText?: string;
   captionText?: string;
+  segmentDuration?: number;
+  segmentFirstTimestamp?: number;
 };
 type Request = { id: string; clips: [{ file: File; muted: boolean }, { file: File; muted: boolean }, { file: File; muted: boolean }]; settings?: RenderSettings };
 type Response = { id: string; type: "progress"; value: number } | { id: string; type: "done"; buffer: ArrayBuffer; duration: number } | { id: string; type: "error"; message: string };
@@ -102,10 +104,16 @@ function transformedFrame(sample: VideoSample, width: number, height: number, se
   const x = (width - drawWidth) / 2 + (recipe?.offsetX ?? 0) * width;
   const y = (height - drawHeight) / 2 + (recipe?.offsetY ?? 0) * height;
   context.filter = `brightness(${recipe?.brightness ?? 1}) saturate(${recipe?.saturation ?? 1})`;
+  const transitionSeconds = (recipe?.transitionMs ?? 0) / 1000;
+  const localTime = Math.max(0, sample.timestamp - (settings.segmentFirstTimestamp ?? 0));
+  const remaining = Math.max(0, (settings.segmentDuration ?? localTime) - localTime);
+  context.globalAlpha = transitionSeconds > 0 ? Math.min(1, localTime / transitionSeconds, remaining / transitionSeconds) : 1;
   sample.draw(context, x, y, drawWidth, drawHeight);
+  context.globalAlpha = 1;
   context.filter = "none";
-  drawOverlayText(context, settings.headlineText, width, height * 0.1, width, "top");
-  drawOverlayText(context, settings.captionText, width, height * 0.86, width, "bottom");
+  const textVariant = recipe?.textPositionVariant ?? 0;
+  drawOverlayText(context, settings.headlineText, width, height * (0.08 + textVariant * 0.02), width, "top");
+  drawOverlayText(context, settings.captionText, width, height * (0.82 + textVariant * 0.02), width, "bottom");
   return canvas;
 }
 
@@ -179,13 +187,19 @@ async function normalizeFile(file: File, includeAudio: boolean, ensureAudio: boo
   if (includeAudio && !(await canEncodeAudio("aac"))) registerAacEncoder();
   const input = new Input({ source: new BlobSource(file), formats: ALL_FORMATS });
   const inputDuration = await input.computeDuration();
+  const inputVideoTrack = await input.getPrimaryVideoTrack();
+  const firstVideoTimestamp = inputVideoTrack ? await inputVideoTrack.getFirstTimestamp() : 0;
+  const trimStart = Math.min((settings.recipe?.trimStartMs ?? 0) / 1000, Math.max(0, inputDuration - 0.2));
+  const trimEnd = Math.min((settings.recipe?.trimEndMs ?? 0) / 1000, Math.max(0, inputDuration - trimStart - 0.2));
+  const frameSettings = { ...settings, segmentDuration: inputDuration - trimStart - trimEnd, segmentFirstTimestamp: firstVideoTimestamp + trimStart };
   const audioAnalysis = includeAudio && settings.audioPolicy.mode === "normalize" ? await analyzeAudio(input) : null;
   const target = new BufferTarget();
   const output = new Output({ format: new Mp4OutputFormat({ fastStart: "in-memory" }), target });
   try {
     const conversion = await Conversion.init({
       input, output, tracks: "primary", showWarnings: false,
-      video: { width, height, fit: settings.compositionMode === "cover" ? "cover" : "contain", codec: "avc", bitrate: settings.quality === "quality" ? 8_000_000 : 4_000_000, frameRate: 30, keyFrameInterval: 2, forceTranscode: true, allowRotationMetadata: false, process: settings.recipe || settings.compositionMode === "blur" || settings.headlineText || settings.captionText ? (sample) => transformedFrame(sample, width, height, settings) : undefined, processedWidth: width, processedHeight: height },
+      trim: trimStart || trimEnd ? { start: firstVideoTimestamp + trimStart, end: inputDuration - trimEnd } : undefined,
+      video: { width, height, fit: settings.compositionMode === "cover" ? "cover" : "contain", codec: "avc", bitrate: settings.quality === "quality" ? 8_000_000 : 4_000_000, frameRate: 30, keyFrameInterval: 2, forceTranscode: true, allowRotationMetadata: false, process: settings.recipe || settings.compositionMode === "blur" || settings.headlineText || settings.captionText ? (sample) => transformedFrame(sample, width, height, frameSettings) : undefined, processedWidth: width, processedHeight: height },
       audio: includeAudio ? { codec: "aac", bitrate: 128_000, sampleRate: 48_000, numberOfChannels: 2, sampleFormat: "f32", forceTranscode: true, process: settings.audioPolicy.mode === "normalize" && audioAnalysis ? (sample) => processAudioSample(sample, inputDuration, settings.audioPolicy, audioAnalysis) : undefined } : { discard: true },
     });
     if (!conversion.isValid) throw new Error("Não foi possível preparar este clipe para o perfil interno.");

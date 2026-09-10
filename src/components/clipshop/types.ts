@@ -51,6 +51,10 @@ export interface VariationRecipe {
   offsetY: number;
   brightness: number;
   saturation: number;
+  textPositionVariant?: number;
+  transitionMs?: number;
+  trimStartMs?: number;
+  trimEndMs?: number;
 }
 
 export interface Variation {
@@ -79,6 +83,7 @@ export interface ClipShopProject {
   audioPolicy: AudioPolicy;
   compositionMode: VideoCompositionMode;
   visualVariationsEnabled: boolean;
+  advancedDiversityEnabled: boolean;
   mp4MetadataEnabled: boolean;
   outputAspectRatio: OutputAspectRatio;
   headlineText: string;

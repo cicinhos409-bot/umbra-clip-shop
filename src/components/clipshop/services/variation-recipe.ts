@@ -3,30 +3,25 @@ import type { Variation, VariationRecipe } from "../types";
 export type VariationDiversityLevel = "original" | "light" | "high";
 export type VariationDifferentiationLevel = "high" | "medium" | "low";
 
-const ZOOM_LEVELS = [1, 1.025, 1.05] as const;
-const X_OFFSETS = [-0.015, 0, 0.015] as const;
-const LOOKS = [
-  { brightness: 0.98, saturation: 1.04 },
-  { brightness: 1, saturation: 1 },
-  { brightness: 1.02, saturation: 1.07 },
-] as const;
-
-/** Produz uma das 27 receitas visuais, estável para o número da variação. */
+/** Produz até 150 receitas visuais estáveis, conservadoras e com assinaturas exclusivas. */
 export function buildVariationRecipe(number: number): VariationRecipe {
-  const index = Math.max(0, Math.floor(number) - 1) % 27;
-  const look = LOOKS[Math.floor(index / 9) % LOOKS.length];
+  const index = Math.max(0, Math.floor(number) - 1) % 150;
   return {
-    version: 1,
-    zoom: ZOOM_LEVELS[index % ZOOM_LEVELS.length],
-    offsetX: X_OFFSETS[Math.floor(index / 3) % X_OFFSETS.length],
-    offsetY: ((index * 7) % 3 - 1) * 0.006,
-    brightness: look.brightness,
-    saturation: look.saturation,
+    version: 2,
+    zoom: 1 + (index % 11) * 0.0045,
+    offsetX: (((index * 7) % 11) - 5) * 0.003,
+    offsetY: (((index * 13) % 5) - 2) * 0.003,
+    brightness: 0.98 + ((index * 3) % 9) * 0.005,
+    saturation: 1 + ((index * 5) % 11) * 0.007,
+    textPositionVariant: index % 3,
+    transitionMs: (index % 4) * 40,
+    trimStartMs: (index % 3) * 20,
+    trimEndMs: ((index * 2) % 3) * 20,
   };
 }
 
 export function variationRecipeSignature(recipe: VariationRecipe) {
-  return `VR${recipe.version}-Z${recipe.zoom.toFixed(3)}-X${recipe.offsetX.toFixed(3)}-Y${recipe.offsetY.toFixed(3)}-B${recipe.brightness.toFixed(2)}-S${recipe.saturation.toFixed(2)}`;
+  return `VR${recipe.version}-Z${recipe.zoom.toFixed(4)}-X${recipe.offsetX.toFixed(3)}-Y${recipe.offsetY.toFixed(3)}-B${recipe.brightness.toFixed(3)}-S${recipe.saturation.toFixed(3)}-T${recipe.textPositionVariant ?? 0}-F${recipe.transitionMs ?? 0}-I${recipe.trimStartMs ?? 0}-O${recipe.trimEndMs ?? 0}`;
 }
 
 export function getVariationDiversityLevel(hookSlot: number, bodySlot: number, ctaSlot: number): VariationDiversityLevel {
@@ -49,7 +44,8 @@ export function getVariationDifferentiationLevel(variation: Variation, selected:
     item.recipe && variationRecipeSignature(item.recipe) === variationRecipeSignature(variation.recipe!),
   ));
 
-  if (mostSharedParts >= 2) return "low";
-  if (mostSharedParts === 1 || repeatsVisualTreatment) return "medium";
+  const repeatsEntireCombination = comparisons.some((item) => item.hookId === variation.hookId && item.bodyId === variation.bodyId && item.ctaId === variation.ctaId);
+  if (repeatsEntireCombination && repeatsVisualTreatment) return "low";
+  if (mostSharedParts > 0 || repeatsVisualTreatment) return "medium";
   return "high";
 }

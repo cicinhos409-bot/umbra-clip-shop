@@ -86,3 +86,19 @@ export function generateVariations(clips: ClipAsset[], strategy: VariationStrate
 export function hasMinimumClips(clips: ClipAsset[]) {
   return (["hook", "body", "cta"] as const).every((category) => group(clips, category).length > 0);
 }
+
+export function orderVariationsForDiversity(variations: Variation[]) {
+  if (variations.length < 3) return [...variations];
+  const remaining = variations.slice(1);
+  const ordered = [variations[0]];
+  while (remaining.length) {
+    const previous = ordered[ordered.length - 1];
+    remaining.sort((a, b) => sharedParts(previous, a) - sharedParts(previous, b) || a.number - b.number);
+    ordered.push(remaining.shift()!);
+  }
+  return ordered;
+}
+
+function sharedParts(a: Variation, b: Variation) {
+  return Number(a.hookId === b.hookId) + Number(a.bodyId === b.bodyId) + Number(a.ctaId === b.ctaId);
+}
