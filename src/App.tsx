@@ -2,10 +2,14 @@ import { useEffect, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import ClipShop from "./components/clipshop";
 import LandingPage from "./components/landing/LandingPage";
+import AuthPage from "./components/auth/AuthPage";
 import { supabase, supabaseConfigured } from "./lib/supabase";
 
 function route() {
-  return window.location.hash.toLowerCase().startsWith("#/clipshop") ? "app" : "landing";
+  const hash = window.location.hash.toLowerCase();
+  if (hash.startsWith("#/clipshop")) return "app";
+  if (hash.startsWith("#/auth")) return "auth";
+  return "landing";
 }
 
 export default function App() {
@@ -23,7 +27,13 @@ export default function App() {
     return () => window.removeEventListener("hashchange", onHash);
   }, []);
 
+  if (currentRoute === "auth") {
+    if (session) { window.location.hash = "#/clipshop"; return null; }
+    return <AuthPage />;
+  }
+
   if (currentRoute === "app") {
+    if (supabaseConfigured && !session) { window.location.hash = "#/auth?mode=login"; return null; }
     const user = session?.user;
     return <ClipShop
       currentUser={{

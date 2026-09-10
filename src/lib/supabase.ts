@@ -23,10 +23,10 @@ export const supabase = createClient(
     auth: {
       persistSession: true,
       autoRefreshToken: true,
-      detectSessionInUrl: false,
+      detectSessionInUrl: true,
       // implícito → o callback do OAuth (Google) e do recovery volta os tokens
       // no fragmento (#access_token=...), que o App.tsx processa manualmente.
-      flowType: "implicit"
+      flowType: "pkce"
     }
   }
 );

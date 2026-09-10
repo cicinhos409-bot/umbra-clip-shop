@@ -27,7 +27,7 @@ const faqs = [
 export default function LandingPage({ session }: { session: Session | null }) {
   const [menu, setMenu] = useState(false);
 
-  const start = () => { window.location.hash = "#/clipshop"; };
+  const start = () => { window.location.hash = session ? "#/clipshop" : "#/auth?mode=signup"; };
   const subscribe = (plan: string) => {
     const checkout = plan === "Pro" ? import.meta.env.VITE_CHECKOUT_PRO_URL : import.meta.env.VITE_CHECKOUT_ELITE_URL;
     if (checkout) { window.location.href = checkout; return; }
