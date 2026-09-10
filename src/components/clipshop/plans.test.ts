@@ -13,6 +13,8 @@ test("allows Elite to generate all 150 combinations in one batch", () => {
 
 test("normalizes trial and admin access to paid Clip Shop tiers", () => {
   expect(normalizeClipShopPlan("trial")).toBe("pro");
+  expect(normalizeClipShopPlan(" Pro ")).toBe("pro");
+  expect(normalizeClipShopPlan("ELITE")).toBe("elite");
   expect(normalizeClipShopPlan("free", true)).toBe("elite");
   expect(getClipShopPlan("unknown").key).toBe("free");
 });

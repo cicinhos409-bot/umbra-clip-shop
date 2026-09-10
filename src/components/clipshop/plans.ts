@@ -20,8 +20,9 @@ export function isUnlimitedPlan(plan: ClipShopPlanDefinition) {
 }
 
 export function normalizeClipShopPlan(plan?: string, isAdmin = false): ClipShopPlanKey {
-  if (isAdmin || plan === "admin" || plan === "elite") return "elite";
-  if (plan === "pro" || plan === "trial") return "pro";
+  const normalizedPlan = plan?.trim().toLowerCase();
+  if (isAdmin || normalizedPlan === "admin" || normalizedPlan === "elite") return "elite";
+  if (normalizedPlan === "pro" || normalizedPlan === "trial") return "pro";
   return "free";
 }
 
