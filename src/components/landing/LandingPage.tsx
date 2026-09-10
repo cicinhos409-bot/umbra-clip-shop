@@ -9,6 +9,11 @@ const plans = [
   { name: "Elite", price: "R$ 67", text: "Para operações em escala.", features: ["470 vídeos por mês", "27 vídeos por lote", "27 combinações", "Prioridade em novidades"] },
 ];
 
+const CHECKOUT_URLS = {
+  Pro: (import.meta.env.VITE_CHECKOUT_PRO_URL as string | undefined) || "https://pay.cakto.com.br/9875ykt_1099216",
+  Elite: (import.meta.env.VITE_CHECKOUT_ELITE_URL as string | undefined) || "https://pay.cakto.com.br/vuq4djx",
+} as const;
+
 const steps = [
   ["01", "Prepare seus criativos", "Grave diferentes ganchos, corpos e chamadas para ação para o mesmo produto."],
   ["02", "Envie para o Umbra", "Organize cada trecho na categoria certa, sem montar cada vídeo em uma timeline."],
@@ -28,10 +33,8 @@ export default function LandingPage({ session }: { session: Session | null }) {
   const [menu, setMenu] = useState(false);
 
   const start = () => { window.location.hash = session ? "#/clipshop" : "#/auth?mode=signup"; };
-  const subscribe = (plan: string) => {
-    const checkout = plan === "Pro" ? import.meta.env.VITE_CHECKOUT_PRO_URL : import.meta.env.VITE_CHECKOUT_ELITE_URL;
-    if (checkout) { window.location.href = checkout; return; }
-    start();
+  const subscribe = (plan: "Pro" | "Elite") => {
+    window.location.href = CHECKOUT_URLS[plan];
   };
 
   return <main className="sales-page">
@@ -101,7 +104,7 @@ export default function LandingPage({ session }: { session: Session | null }) {
 
     <section className="section shell" id="precos">
       <div className="section-heading centered"><span>PLANOS SEM COMPLICAÇÃO</span><h2>Comece grátis. Escale quando quiser.</h2></div>
-      <div className="pricing">{plans.map((plan) => <article className={plan.featured ? "featured" : ""} key={plan.name}>{plan.featured && <div className="popular">MAIS ESCOLHIDO</div>}<h3>{plan.name}</h3><p>{plan.text}</p><div className="price">{plan.price}<small>{plan.price !== "R$ 0" && "/mês"}</small></div><ul>{plan.features.map((item) => <li key={item}><Check size={16}/>{item}</li>)}</ul><button onClick={() => plan.name === "Free" ? start() : subscribe(plan.name)}>{plan.name === "Free" ? "Começar grátis" : `Assinar ${plan.name}`}<ArrowRight size={16}/></button></article>)}</div>
+      <div className="pricing">{plans.map((plan) => <article className={plan.featured ? "featured" : ""} key={plan.name}>{plan.featured && <div className="popular">MAIS ESCOLHIDO</div>}<h3>{plan.name}</h3><p>{plan.text}</p><div className="price">{plan.price}<small>{plan.price !== "R$ 0" && "/mês"}</small></div><ul>{plan.features.map((item) => <li key={item}><Check size={16}/>{item}</li>)}</ul><button onClick={() => plan.name === "Free" ? start() : subscribe(plan.name as "Pro" | "Elite")}>{plan.name === "Free" ? "Começar grátis" : `Assinar ${plan.name}`}<ArrowRight size={16}/></button></article>)}</div>
     </section>
 
     <section className="section shell faq" id="faq"><div className="section-heading"><span>PERGUNTAS FREQUENTES</span><h2>Antes de apertar o play.</h2></div><div>{faqs.map(([q,a]) => <details key={q}><summary>{q}<ChevronDown/></summary><p>{a}</p></details>)}</div></section>

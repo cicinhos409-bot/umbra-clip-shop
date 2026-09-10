@@ -35,10 +35,11 @@ export default function AuthPage() {
     setBusy(true);
     try {
       if (mode === "signup") {
+        const siteUrl = (import.meta.env.VITE_SITE_URL as string | undefined) || window.location.origin;
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
-          options: { data: { name, plan: "free" }, emailRedirectTo: `${window.location.origin}/#/clipshop` },
+          options: { data: { name, plan: "free" }, emailRedirectTo: `${siteUrl.replace(/\/$/, "")}/#/clipshop` },
         });
         if (error) throw error;
         if (data.session) window.location.hash = "#/clipshop";

@@ -1,7 +1,10 @@
 import { createClient } from "@supabase/supabase-js";
 
-const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+const DEFAULT_SUPABASE_URL = "https://bqxdfnovkbxbveahlyjl.supabase.co";
+const DEFAULT_SUPABASE_PUBLISHABLE_KEY = "sb_publishable_fWzvPT8rPm_9K6VC1Glh8A_LsuBe7RG";
+
+const url = (import.meta.env.VITE_SUPABASE_URL as string | undefined) || DEFAULT_SUPABASE_URL;
+const anonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined) || DEFAULT_SUPABASE_PUBLISHABLE_KEY;
 
 // Whether Supabase is properly configured (used to show friendly errors instead of crashing).
 export const supabaseConfigured = Boolean(url && anonKey);
@@ -14,11 +17,9 @@ if (!supabaseConfigured) {
   );
 }
 
-// Fallback placeholders keep createClient from throwing at import time when env is missing.
-// Auth/DB calls will fail gracefully (and are caught) until the real env is configured.
 export const supabase = createClient(
-  url || "https://placeholder.supabase.co",
-  anonKey || "placeholder-anon-key",
+  url,
+  anonKey,
   {
     auth: {
       persistSession: true,
