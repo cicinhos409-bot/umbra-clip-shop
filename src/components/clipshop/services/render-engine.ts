@@ -3,7 +3,17 @@ import { buildVariationRecipe, variationRecipeSignature } from "./variation-reci
 
 export interface RenderedVideo { blob: Blob; duration: number }
 
-export function renderVariation(variation: Variation, clips: ClipAsset[], settings?: { audioPolicy: AudioPolicy; compositionMode: VideoCompositionMode; quality?: OutputQuality; visualVariationsEnabled?: boolean; mp4MetadataEnabled?: boolean; outputAspectRatio?: OutputAspectRatio; headlineText?: string; captionText?: string }, onProgress?: (event: RenderProgress) => void, signal?: AbortSignal): Promise<RenderedVideo> {
+export async function renderVariation(variation: Variation, clips: ClipAsset[], settings?: { audioPolicy: AudioPolicy; compositionMode: VideoCompositionMode; quality?: OutputQuality; visualVariationsEnabled?: boolean; mp4MetadataEnabled?: boolean; outputAspectRatio?: OutputAspectRatio; headlineText?: string; captionText?: string }, onProgress?: (event: RenderProgress) => void, signal?: AbortSignal): Promise<RenderedVideo> {
+  try {
+    return await renderVariationOnce(variation, clips, settings, onProgress, signal);
+  } catch (cause) {
+    if (signal?.aborted || !isTemporaryNetworkError(cause)) throw cause;
+    await abortableDelay(750, signal);
+    return renderVariationOnce(variation, clips, settings, onProgress, signal);
+  }
+}
+
+function renderVariationOnce(variation: Variation, clips: ClipAsset[], settings?: { audioPolicy: AudioPolicy; compositionMode: VideoCompositionMode; quality?: OutputQuality; visualVariationsEnabled?: boolean; mp4MetadataEnabled?: boolean; outputAspectRatio?: OutputAspectRatio; headlineText?: string; captionText?: string }, onProgress?: (event: RenderProgress) => void, signal?: AbortSignal): Promise<RenderedVideo> {
   const resolveClip = (id: string) => clips.find((clip) => clip.id === id);
   const hook = resolveClip(variation.hookId);
   const body = resolveClip(variation.bodyId);
@@ -46,5 +56,28 @@ export function renderVariation(variation: Variation, clips: ClipAsset[], settin
         metadata,
       },
     });
+  });
+}
+
+function isTemporaryNetworkError(cause: unknown) {
+  const message = cause instanceof Error ? `${cause.name} ${cause.message}` : String(cause || "");
+  return /network|failed to fetch|load failed|worker script/i.test(message);
+}
+
+function abortableDelay(milliseconds: number, signal?: AbortSignal) {
+  return new Promise<void>((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(new DOMException("Renderização cancelada.", "AbortError"));
+      return;
+    }
+    const onAbort = () => {
+      window.clearTimeout(timer);
+      reject(new DOMException("Renderização cancelada.", "AbortError"));
+    };
+    const timer = window.setTimeout(() => {
+      signal?.removeEventListener("abort", onAbort);
+      resolve();
+    }, milliseconds);
+    signal?.addEventListener("abort", onAbort, { once: true });
   });
 }

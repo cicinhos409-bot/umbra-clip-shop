@@ -1,6 +1,7 @@
-import type { VariationRecipe } from "../types";
+import type { Variation, VariationRecipe } from "../types";
 
 export type VariationDiversityLevel = "original" | "light" | "high";
+export type VariationDifferentiationLevel = "high" | "medium" | "low";
 
 const ZOOM_LEVELS = [1, 1.025, 1.05] as const;
 const X_OFFSETS = [-0.015, 0, 0.015] as const;
@@ -31,4 +32,24 @@ export function variationRecipeSignature(recipe: VariationRecipe) {
 export function getVariationDiversityLevel(hookSlot: number, bodySlot: number, ctaSlot: number): VariationDiversityLevel {
   const distinctSources = new Set([hookSlot, bodySlot, ctaSlot]).size;
   return distinctSources === 1 ? "original" : distinctSources === 2 ? "light" : "high";
+}
+
+/** Compara uma combinação com as demais selecionadas e informa quanto ela se diferencia. */
+export function getVariationDifferentiationLevel(variation: Variation, selected: Variation[]): VariationDifferentiationLevel {
+  const comparisons = selected.filter((item) => item.id !== variation.id);
+  if (!comparisons.length) return "high";
+
+  const mostSharedParts = comparisons.reduce((highest, item) => {
+    const sharedParts = Number(item.hookId === variation.hookId)
+      + Number(item.bodyId === variation.bodyId)
+      + Number(item.ctaId === variation.ctaId);
+    return Math.max(highest, sharedParts);
+  }, 0);
+  const repeatsVisualTreatment = Boolean(variation.recipe && comparisons.some((item) =>
+    item.recipe && variationRecipeSignature(item.recipe) === variationRecipeSignature(variation.recipe!),
+  ));
+
+  if (mostSharedParts >= 2) return "low";
+  if (mostSharedParts === 1 || repeatsVisualTreatment) return "medium";
+  return "high";
 }
