@@ -31,7 +31,7 @@ export function validateAudioShuffleInput(input: AudioShuffleGenerationInput) {
   validateAudioShuffleSettings(input.settings);
   if (!Number.isFinite(input.sourceDuration) || input.sourceDuration <= 0) throw new AudioShuffleValidationError("INVALID_SOURCE_DURATION", "A fonte precisa ter duração válida.");
   if (!input.targets.length) throw new AudioShuffleValidationError("NO_TARGETS", "Informe ao menos uma variação para gerar.");
-  if (input.targets.length > 27) throw new AudioShuffleValidationError("TOO_MANY_TARGETS", "O lote aceita no máximo 27 variações.");
+  if (input.targets.length > 150) throw new AudioShuffleValidationError("TOO_MANY_TARGETS", "O lote aceita no máximo 150 variações.");
   const ids = new Set<string>();
   for (const target of input.targets) {
     if (!target.variationId || ids.has(target.variationId)) throw new AudioShuffleValidationError("INVALID_TARGET_ID", "As variações precisam ter IDs únicos.");

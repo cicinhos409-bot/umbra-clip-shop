@@ -43,6 +43,18 @@ test("creates all 27 deterministic variations for 3x3x3", () => {
   }
 });
 
+test("caps a 6x6x6 workspace at 150 diverse unique variations", () => {
+  const expanded = (["hook", "body", "cta"] as const).flatMap((category) =>
+    [1, 2, 3, 4, 5, 6].map((slot) => clip(category, slot)),
+  );
+  const result = generateVariations(expanded);
+  expect(result).toHaveLength(150);
+  expect(new Set(result.map((item) => item.id)).size).toBe(150);
+  for (const category of ["hookId", "bodyId", "ctaId"] as const) {
+    expect(new Set(result.map((item) => item[category])).size).toBe(6);
+  }
+});
+
 test.each(["balanced", "hooks", "bodies", "ctas"] as const)("strategy %s never duplicates a trio", (strategy) => {
   const result = generateVariations(full, strategy);
   const trios = result.map((item) => `${item.hookId}|${item.bodyId}|${item.ctaId}`);

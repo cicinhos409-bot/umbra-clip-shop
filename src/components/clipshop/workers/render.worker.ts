@@ -7,7 +7,7 @@ import {
 } from "mediabunny";
 import { registerAacEncoder } from "@mediabunny/aac-encoder";
 import { getSegmentDuration, normalizePacketTimestamp } from "../services/packet-timing";
-import type { AudioPolicy, OutputQuality, VariationRecipe, VideoCompositionMode } from "../types";
+import type { AudioPolicy, OutputAspectRatio, OutputQuality, VariationRecipe, VideoCompositionMode } from "../types";
 
 type RenderSettings = {
   audioPolicy: AudioPolicy;
@@ -15,6 +15,9 @@ type RenderSettings = {
   quality?: OutputQuality;
   recipe?: VariationRecipe;
   metadata?: { title: string; description: string; comment: string };
+  outputAspectRatio?: OutputAspectRatio;
+  headlineText?: string;
+  captionText?: string;
 };
 type Request = { id: string; clips: [{ file: File; muted: boolean }, { file: File; muted: boolean }, { file: File; muted: boolean }]; settings?: RenderSettings };
 type Response = { id: string; type: "progress"; value: number } | { id: string; type: "done"; buffer: ArrayBuffer; duration: number } | { id: string; type: "error"; message: string };
@@ -70,7 +73,7 @@ function processAudioSample(sample: AudioSample, duration: number, policy: Audio
 
 function transformedFrame(sample: VideoSample, width: number, height: number, settings: RenderSettings) {
   const recipe = settings.recipe;
-  if (!recipe && settings.compositionMode !== "blur") return sample;
+  if (!recipe && settings.compositionMode !== "blur" && !settings.headlineText && !settings.captionText) return sample;
   const canvas = new OffscreenCanvas(width, height);
   const context = canvas.getContext("2d");
   if (!context) return sample;
@@ -101,7 +104,36 @@ function transformedFrame(sample: VideoSample, width: number, height: number, se
   context.filter = `brightness(${recipe?.brightness ?? 1}) saturate(${recipe?.saturation ?? 1})`;
   sample.draw(context, x, y, drawWidth, drawHeight);
   context.filter = "none";
+  drawOverlayText(context, settings.headlineText, width, height * 0.1, width, "top");
+  drawOverlayText(context, settings.captionText, width, height * 0.86, width, "bottom");
   return canvas;
+}
+
+function drawOverlayText(context: OffscreenCanvasRenderingContext2D, text: string | undefined, width: number, y: number, canvasWidth: number, position: "top" | "bottom") {
+  const value = text?.trim();
+  if (!value) return;
+  const fontSize = Math.max(24, Math.round(canvasWidth * (position === "top" ? 0.052 : 0.04)));
+  context.font = `900 ${fontSize}px Arial, sans-serif`;
+  context.textAlign = "center";
+  context.textBaseline = "middle";
+  context.lineJoin = "round";
+  context.lineWidth = Math.max(5, fontSize * 0.16);
+  context.strokeStyle = "rgba(0,0,0,.92)";
+  context.fillStyle = position === "top" ? "#fbbf24" : "#ffffff";
+  const maxChars = Math.max(12, Math.floor(34 * canvasWidth / 1080));
+  const words = value.split(/\s+/);
+  const lines: string[] = [];
+  let line = "";
+  for (const word of words) {
+    const next = line ? `${line} ${word}` : word;
+    if (next.length > maxChars && line) { lines.push(line); line = word; } else line = next;
+  }
+  if (line) lines.push(line);
+  lines.slice(0, 3).forEach((row, index) => {
+    const lineY = y + index * fontSize * 1.15;
+    context.strokeText(row, width / 2, lineY);
+    context.fillText(row, width / 2, lineY);
+  });
 }
 
 async function addSilentAudio(file: File) {
@@ -153,7 +185,7 @@ async function normalizeFile(file: File, includeAudio: boolean, ensureAudio: boo
   try {
     const conversion = await Conversion.init({
       input, output, tracks: "primary", showWarnings: false,
-      video: { width, height, fit: settings.compositionMode === "cover" ? "cover" : "contain", codec: "avc", bitrate: settings.quality === "quality" ? 8_000_000 : 4_000_000, frameRate: 30, keyFrameInterval: 2, forceTranscode: true, allowRotationMetadata: false, process: settings.recipe || settings.compositionMode === "blur" ? (sample) => transformedFrame(sample, width, height, settings) : undefined, processedWidth: width, processedHeight: height },
+      video: { width, height, fit: settings.compositionMode === "cover" ? "cover" : "contain", codec: "avc", bitrate: settings.quality === "quality" ? 8_000_000 : 4_000_000, frameRate: 30, keyFrameInterval: 2, forceTranscode: true, allowRotationMetadata: false, process: settings.recipe || settings.compositionMode === "blur" || settings.headlineText || settings.captionText ? (sample) => transformedFrame(sample, width, height, settings) : undefined, processedWidth: width, processedHeight: height },
       audio: includeAudio ? { codec: "aac", bitrate: 128_000, sampleRate: 48_000, numberOfChannels: 2, sampleFormat: "f32", forceTranscode: true, process: settings.audioPolicy.mode === "normalize" && audioAnalysis ? (sample) => processAudioSample(sample, inputDuration, settings.audioPolicy, audioAnalysis) : undefined } : { discard: true },
     });
     if (!conversion.isValid) throw new Error("Não foi possível preparar este clipe para o perfil interno.");
@@ -187,13 +219,17 @@ async function concat(files: [File, File, File], muted: [boolean, boolean, boole
       const configs = await Promise.all(audios.map((track) => track.getDecoderConfig()));
       needsAudioNormalization = !codecs[0] || codecs.some((codec) => codec !== codecs[0]) || configs.some((config) => config?.sampleRate !== configs[0]?.sampleRate || config?.numberOfChannels !== configs[0]?.numberOfChannels);
     }
-    const forcePolicyNormalization = Boolean(settings.recipe) || settings.compositionMode !== "original" || settings.audioPolicy.mode !== "preserve" || muted.some(Boolean) || (hasSomeAudio && !hasEveryAudio);
+    const forcePolicyNormalization = Boolean(settings.outputAspectRatio) || Boolean(settings.recipe) || Boolean(settings.headlineText) || Boolean(settings.captionText) || settings.compositionMode !== "original" || settings.audioPolicy.mode !== "preserve" || muted.some(Boolean) || (hasSomeAudio && !hasEveryAudio);
     if ((needsVideoNormalization || needsAudioNormalization || forcePolicyNormalization) && !normalized) {
       progress(0.03);
       const normalizedFiles = [] as File[];
-      const profile = settings.quality === "quality" ? [1080, 1920] : [720, 1280];
-      const targetWidth = settings.compositionMode === "original" ? Math.max(2, dimensions[0][0] - dimensions[0][0] % 2) : profile[0];
-      const targetHeight = settings.compositionMode === "original" ? Math.max(2, dimensions[0][1] - dimensions[0][1] % 2) : profile[1];
+      const longEdge = settings.quality === "quality" ? 1920 : 1280;
+      const shortEdge = settings.quality === "quality" ? 1080 : 720;
+      const profile = settings.outputAspectRatio === "1:1" ? [shortEdge, shortEdge]
+        : settings.outputAspectRatio === "16:9" ? [longEdge, shortEdge]
+          : [shortEdge, longEdge];
+      const targetWidth = settings.compositionMode === "original" && !settings.outputAspectRatio ? Math.max(2, dimensions[0][0] - dimensions[0][0] % 2) : profile[0];
+      const targetHeight = settings.compositionMode === "original" && !settings.outputAspectRatio ? Math.max(2, dimensions[0][1] - dimensions[0][1] % 2) : profile[1];
       for (let index = 0; index < files.length; index += 1) {
         normalizedFiles.push(await normalizeFile(files[index], effectiveAudio[index], hasSomeAudio, targetWidth, targetHeight, settings));
         progress(0.05 + (index + 1) / files.length * 0.4);

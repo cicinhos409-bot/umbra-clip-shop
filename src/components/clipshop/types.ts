@@ -6,6 +6,7 @@ export type ProjectStatus = "draft" | "ready" | "processing" | "completed";
 export type OutputQuality = "performance" | "quality";
 export type AudioPolicyMode = "preserve" | "normalize" | "mute";
 export type VideoCompositionMode = "cover" | "contain" | "blur" | "original";
+export type OutputAspectRatio = "9:16" | "1:1" | "16:9";
 
 export interface AudioPolicy {
   mode: AudioPolicyMode;
@@ -79,6 +80,9 @@ export interface ClipShopProject {
   compositionMode: VideoCompositionMode;
   visualVariationsEnabled: boolean;
   mp4MetadataEnabled: boolean;
+  outputAspectRatio: OutputAspectRatio;
+  headlineText: string;
+  captionText: string;
   exportNameTemplate: string;
   clips: ClipAsset[];
   variations: Variation[];

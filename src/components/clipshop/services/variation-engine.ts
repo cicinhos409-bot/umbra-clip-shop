@@ -2,7 +2,7 @@ import type { ClipAsset, ClipCategory, Variation, VariationStrategy } from "../t
 import { buildVariationRecipe } from "./variation-recipe";
 
 export const CLIPSHOP_ALGORITHM_VERSION = 2;
-export const MAX_SUGGESTED_VARIATIONS = 27;
+export const MAX_SUGGESTED_VARIATIONS = 150;
 
 type Trio = { hookId: string; bodyId: string; ctaId: string };
 

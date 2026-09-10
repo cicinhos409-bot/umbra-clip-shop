@@ -64,7 +64,7 @@ export default function AuthPage() {
         <span>CRIATIVOS EM ESCALA</span>
         <h1>Grave as peças.<br/><em>Multiplique os resultados.</em></h1>
         <p>Combine seus ganchos, corpos e CTAs para testar mais ideias no TikTok Shop.</p>
-        <ul><li><Check/>Até 27 combinações únicas</li><li><Check/>Processamento local e privado</li><li><Check/>Comece com 3 vídeos grátis</li></ul>
+          <ul><li><Check/>Até 150 combinações únicas</li><li><Check/>Processamento local e privado</li><li><Check/>Comece com 3 vídeos grátis</li></ul>
       </div>
       <small>© {new Date().getFullYear()} UMBRA</small>
     </section>

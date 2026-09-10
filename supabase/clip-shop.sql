@@ -104,6 +104,24 @@ $$;
 
 revoke all on function public.clip_shop_plan_limit(text) from public, anon, authenticated;
 
+create or replace function public.clip_shop_plan_batch_limit(p_plan text)
+returns integer
+language sql
+immutable
+security invoker
+set search_path = public
+as $$
+  select case p_plan
+    when 'free' then 1
+    when 'pro' then 50
+    when 'elite' then 150
+    when 'admin' then 150
+    else 1
+  end
+$$;
+
+revoke all on function public.clip_shop_plan_batch_limit(text) from public, anon, authenticated;
+
 drop function if exists public.get_clip_shop_usage();
 create function public.get_clip_shop_usage()
 returns table (used bigint, reserved bigint, limit_total integer, remaining bigint, plan text)
@@ -158,6 +176,7 @@ declare
   v_existing_status text;
   v_committed bigint;
   v_limit integer;
+  v_batch_limit integer;
   v_period date := date_trunc('month', now())::date;
   v_id uuid;
 begin
@@ -182,6 +201,11 @@ begin
 
   v_plan := public.clip_shop_effective_plan(v_user);
   v_limit := public.clip_shop_plan_limit(v_plan);
+  v_batch_limit := public.clip_shop_plan_batch_limit(v_plan);
+
+  if p_requested_count > v_batch_limit then
+    raise exception 'CLIP_SHOP_BATCH_LIMIT_REACHED' using errcode = 'P0001';
+  end if;
 
   select coalesce(sum(case
     when status = 'completed' then result_count

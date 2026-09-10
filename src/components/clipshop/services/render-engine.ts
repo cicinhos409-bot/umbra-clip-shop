@@ -1,9 +1,9 @@
-import type { AudioPolicy, ClipAsset, OutputQuality, RenderProgress, Variation, VideoCompositionMode } from "../types";
+import type { AudioPolicy, ClipAsset, OutputAspectRatio, OutputQuality, RenderProgress, Variation, VideoCompositionMode } from "../types";
 import { buildVariationRecipe, variationRecipeSignature } from "./variation-recipe";
 
 export interface RenderedVideo { blob: Blob; duration: number }
 
-export function renderVariation(variation: Variation, clips: ClipAsset[], settings?: { audioPolicy: AudioPolicy; compositionMode: VideoCompositionMode; quality?: OutputQuality; visualVariationsEnabled?: boolean; mp4MetadataEnabled?: boolean }, onProgress?: (event: RenderProgress) => void, signal?: AbortSignal): Promise<RenderedVideo> {
+export function renderVariation(variation: Variation, clips: ClipAsset[], settings?: { audioPolicy: AudioPolicy; compositionMode: VideoCompositionMode; quality?: OutputQuality; visualVariationsEnabled?: boolean; mp4MetadataEnabled?: boolean; outputAspectRatio?: OutputAspectRatio; headlineText?: string; captionText?: string }, onProgress?: (event: RenderProgress) => void, signal?: AbortSignal): Promise<RenderedVideo> {
   const resolveClip = (id: string) => clips.find((clip) => clip.id === id);
   const hook = resolveClip(variation.hookId);
   const body = resolveClip(variation.bodyId);

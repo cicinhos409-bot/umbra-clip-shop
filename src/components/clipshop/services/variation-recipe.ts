@@ -1,5 +1,7 @@
 import type { VariationRecipe } from "../types";
 
+export type VariationDiversityLevel = "original" | "light" | "high";
+
 const ZOOM_LEVELS = [1, 1.025, 1.05] as const;
 const X_OFFSETS = [-0.015, 0, 0.015] as const;
 const LOOKS = [
@@ -26,3 +28,7 @@ export function variationRecipeSignature(recipe: VariationRecipe) {
   return `VR${recipe.version}-Z${recipe.zoom.toFixed(3)}-X${recipe.offsetX.toFixed(3)}-Y${recipe.offsetY.toFixed(3)}-B${recipe.brightness.toFixed(2)}-S${recipe.saturation.toFixed(2)}`;
 }
 
+export function getVariationDiversityLevel(hookSlot: number, bodySlot: number, ctaSlot: number): VariationDiversityLevel {
+  const distinctSources = new Set([hookSlot, bodySlot, ctaSlot]).size;
+  return distinctSources === 1 ? "original" : distinctSources === 2 ? "light" : "high";
+}

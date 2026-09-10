@@ -5,7 +5,7 @@ Workspace autenticado em `#/clipshop` para combinar Ganchos, Corpos e CTAs com p
 ## Arquitetura
 
 - `ClipShop.tsx`: projetos, ingestão, combinações, preview, revisão, fila e resultados.
-- `services/variation-engine.ts`: motor determinístico e versionado de até 27 variações.
+- `services/variation-engine.ts`: motor determinístico e versionado de até 150 variações.
 - `services/clip-metadata.ts`: inspeção e thumbnail via Mediabunny.
 - `workers/render.worker.ts`: remux rápido e normalização 720×1280/H.264/AAC.
 - `services/render-engine.ts`: contrato e cancelamento do Worker.

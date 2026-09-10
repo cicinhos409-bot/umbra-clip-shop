@@ -3,7 +3,7 @@ import type { AudioShuffleSequence } from "../types";
 
 export function calculateVariationAudioTargets(variations: Variation[], clips: ClipAsset[]) {
   const durations = new Map(clips.map((clip) => [clip.id, clip.media.duration]));
-  return variations.slice(0, 27).map((variation) => ({
+  return variations.slice(0, 150).map((variation) => ({
     variationId: variation.id,
     duration: [variation.hookId, variation.bodyId, variation.ctaId].reduce((sum, id) => sum + (durations.get(id) ?? 0), 0),
   })).filter((target) => target.duration > 0);

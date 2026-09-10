@@ -11,8 +11,8 @@ export interface ClipShopPlanDefinition {
 
 export const CLIP_SHOP_PLANS: Record<ClipShopPlanKey, ClipShopPlanDefinition> = {
   free: { key: "free", name: "Free", monthlyVideos: 3, combinations: 3, batchSize: 1, description: "Para conhecer o fluxo completo do Clip Shop." },
-  pro: { key: "pro", name: "Pro", monthlyVideos: 1000, combinations: 27, batchSize: 5, description: "Para afiliados que publicam criativos toda semana." },
-  elite: { key: "elite", name: "Elite", monthlyVideos: -1, combinations: 27, batchSize: 27, description: "Para operações que precisam produzir sem limite mensal." },
+  pro: { key: "pro", name: "Pro", monthlyVideos: 1000, combinations: 150, batchSize: 50, description: "Para afiliados que publicam criativos toda semana." },
+  elite: { key: "elite", name: "Elite", monthlyVideos: -1, combinations: 150, batchSize: 150, description: "Para operações que precisam produzir sem limite mensal." },
 };
 
 export function isUnlimitedPlan(plan: ClipShopPlanDefinition) {

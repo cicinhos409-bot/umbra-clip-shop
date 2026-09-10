@@ -5,8 +5,8 @@ import Logo from "../Logo";
 
 const plans = [
   { name: "Free", price: "R$ 0", text: "Para testar o fluxo completo.", features: ["3 vídeos por mês", "1 vídeo por lote", "Processamento local"] },
-  { name: "Pro", price: "R$ 27", text: "Para publicar toda semana.", featured: true, features: ["Até 1.000 vídeos por mês", "5 vídeos por lote", "27 combinações", "Audio Shuffle"] },
-  { name: "Elite", price: "R$ 67", text: "Para operações em escala.", features: ["Vídeos ilimitados", "27 vídeos por lote", "27 combinações", "Prioridade em novidades"] },
+  { name: "Pro", price: "R$ 27", text: "Para publicar toda semana.", featured: true, features: ["Até 1.000 vídeos por mês", "50 vídeos por lote", "Até 150 combinações", "Audio Shuffle"] },
+  { name: "Elite", price: "R$ 67", text: "Para operações em escala.", features: ["Vídeos ilimitados", "150 vídeos por lote", "Até 150 combinações", "Prioridade em novidades"] },
 ];
 
 const CHECKOUT_URLS = {
@@ -25,7 +25,7 @@ const steps = [
 const faqs = [
   ["Meus vídeos são enviados para algum servidor?", "Não. A combinação e a renderização acontecem no seu navegador. O Supabase registra apenas sua conta, plano e consumo."],
   ["Preciso instalar algum programa?", "Não. O Clip Shop funciona direto no navegador, sem plugins ou editores pesados."],
-  ["Quantos clipes preciso enviar?", "Você começa com 1 gancho, 1 corpo e 1 CTA. Com 3 de cada, libera 27 combinações únicas."],
+  ["Quantos clipes preciso enviar?", "Você começa com 1 gancho, 1 corpo e 1 CTA. Pode enviar até 6 de cada categoria para o motor preparar até 150 combinações únicas."],
   ["Posso cancelar quando quiser?", "Sim. Você mantém o acesso até o fim do período contratado e pode continuar no plano gratuito."],
 ];
 
@@ -63,10 +63,10 @@ export default function LandingPage({ session }: { session: Session | null }) {
             <div className="clip-columns">
               {[["01","GANCHOS","PARE DE ROLAR"],["02","CORPOS","OFERTA PRINCIPAL"],["03","CTAs","COMPRE AGORA"]].map(([n,t,c]) => <div className="clip-column" key={n}><small>{n} · {t}</small><div className="video-tile"><Play size={18}/><span>{c}</span></div><div className="mini-tile"/><div className="mini-tile"/></div>)}
             </div>
-            <div className="generate-row"><span><Layers3 size={17}/> 27 combinações prontas</span><button>Gerar criativos <WandSparkles size={15}/></button></div>
+                <div className="generate-row"><span><Layers3 size={17}/> 150 combinações prontas</span><button>Gerar criativos <WandSparkles size={15}/></button></div>
           </div>
         </div>
-        <div className="floating-badge badge-one"><Zap size={18}/><span><b>27 vídeos</b> em poucos cliques</span></div>
+              <div className="floating-badge badge-one"><Zap size={18}/><span><b>150 vídeos</b> em poucos cliques</span></div>
         <div className="floating-badge badge-two"><LockKeyhole size={18}/><span><b>100% local</b> seus arquivos seguros</span></div>
       </div>
     </section>
@@ -93,9 +93,9 @@ export default function LandingPage({ session }: { session: Session | null }) {
     </div></section>
 
     <section className="section dark-band" id="recursos"><div className="shell">
-      <div className="section-heading"><span>NÃO EDITE 27 VEZES</span><h2>Crie as peças uma vez.<br/>Teste o que realmente importa.</h2><p>Qual gancho prende mais? Qual demonstração segura a atenção? Qual CTA gera mais cliques? O Umbra ajuda você a descobrir.</p></div>
+          <div className="section-heading"><span>NÃO EDITE 150 VEZES</span><h2>Crie as peças uma vez.<br/>Teste o que realmente importa.</h2><p>Qual gancho prende mais? Qual demonstração segura a atenção? Qual CTA gera mais cliques? O Umbra ajuda você a descobrir.</p></div>
       <div className="feature-grid">{[
-        ["27×", "Combinações únicas", "Misture 3 ganchos, 3 corpos e 3 CTAs sem repetir trios."],
+            ["150×", "Combinações únicas", "Misture até 6 ganchos, 6 corpos e 6 CTAs em até 150 trios diversos."],
         ["LOCAL", "Privacidade por padrão", "Seus vídeos não sobem para nossos servidores."],
         ["ZIP", "Exportação em lote", "Baixe vídeos e manifesto organizados em um único pacote."],
         ["AUDIO", "Audio Shuffle", "Crie sequências sonoras exclusivas para cada variação."],
