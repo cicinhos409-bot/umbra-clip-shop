@@ -2,12 +2,11 @@ import { useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { ArrowRight, Check, ChevronDown, Clapperboard, Layers3, LockKeyhole, Menu, Play, Sparkles, WandSparkles, X, Zap } from "lucide-react";
 import Logo from "../Logo";
-import { supabase, supabaseConfigured } from "../../lib/supabase";
 
 const plans = [
   { name: "Free", price: "R$ 0", text: "Para testar o fluxo completo.", features: ["3 vídeos por mês", "1 vídeo por lote", "Processamento local"] },
-  { name: "Pro", price: "R$ 49", text: "Para publicar toda semana.", featured: true, features: ["270 vídeos por mês", "5 vídeos por lote", "27 combinações", "Audio Shuffle"] },
-  { name: "Elite", price: "R$ 97", text: "Para operações em escala.", features: ["470 vídeos por mês", "27 vídeos por lote", "27 combinações", "Prioridade em novidades"] },
+  { name: "Pro", price: "R$ 27", text: "Para publicar toda semana.", featured: true, features: ["270 vídeos por mês", "5 vídeos por lote", "27 combinações", "Audio Shuffle"] },
+  { name: "Elite", price: "R$ 67", text: "Para operações em escala.", features: ["470 vídeos por mês", "27 vídeos por lote", "27 combinações", "Prioridade em novidades"] },
 ];
 
 const steps = [
@@ -27,21 +26,12 @@ const faqs = [
 
 export default function LandingPage({ session }: { session: Session | null }) {
   const [menu, setMenu] = useState(false);
-  const [email, setEmail] = useState("");
-  const [message, setMessage] = useState("");
 
   const start = () => { window.location.hash = "#/clipshop"; };
   const subscribe = (plan: string) => {
     const checkout = plan === "Pro" ? import.meta.env.VITE_CHECKOUT_PRO_URL : import.meta.env.VITE_CHECKOUT_ELITE_URL;
     if (checkout) { window.location.href = checkout; return; }
-    document.getElementById("acesso")?.scrollIntoView({ behavior: "smooth" });
-    setMessage(`Informe seu e-mail para começar. O checkout do plano ${plan} será liberado em seguida.`);
-  };
-  const login = async (event: React.FormEvent) => {
-    event.preventDefault();
-    if (!supabaseConfigured) { setMessage("Modo demonstração ativo. Abrindo seu workspace..."); setTimeout(start, 500); return; }
-    const { error } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.origin + "/#/clipshop" } });
-    setMessage(error ? error.message : "Link de acesso enviado. Confira seu e-mail.");
+    start();
   };
 
   return <main className="sales-page">
@@ -58,11 +48,7 @@ export default function LandingPage({ session }: { session: Session | null }) {
         <div className="eyebrow"><Sparkles size={14} /> Criativos em escala para TikTok Shop</div>
         <h1>Grave poucos trechos.<br/><em>Transforme em dezenas de criativos.</em></h1>
         <p>Combine automaticamente seus <b>Ganchos + Corpos + CTAs</b> e transforme poucas gravações em várias versões do mesmo criativo.</p>
-        <form className="hero-form" id="acesso" onSubmit={login}>
-          <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Seu melhor e-mail" aria-label="Seu e-mail" />
-          <button>Começar grátis <ArrowRight size={18} /></button>
-        </form>
-        {message && <span className="form-message">{message}</span>}
+        <button className="hero-primary-cta" onClick={start}>Quero acessar o Umbra Clip Shop <ArrowRight size={18} /></button>
         <div className="hero-proof"><span><Check size={14}/> Menos tempo editando</span><span><Check size={14}/> Mais criativos para testar</span><span><LockKeyhole size={14}/> Arquivos privados</span></div>
       </div>
       <div className="product-stage">
